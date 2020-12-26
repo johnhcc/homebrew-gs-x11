@@ -23,7 +23,7 @@ class GhostscriptX11 < Formula
 
   depends_on "pkg-config" => :build
   depends_on "libtiff"
-  depends_on :x11
+  depends_on "libx11"
 
   on_macos do
     patch :DATA # Uncomment macOS-specific make vars

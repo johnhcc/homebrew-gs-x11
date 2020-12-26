@@ -7,14 +7,14 @@ class Gv < Formula
 
   depends_on "pkg-config" => :build
   depends_on "johnhcc/gs-x11/ghostscript-x11"
-  depends_on :x11
-  depends_on "libxaw3d" unless OS.mac?
-  
+  depends_on "libx11"
+
   skip_clean "share/gv/safe-gs-workdir"
-  
+
   def install
-    inreplace "src/Makefile.in", "GV.gsInterpreter:\tgs", "GV.gsInterpreter:\t#{HOMEBREW_PREFIX}/opt/ghostscript-x11/bin/gs" 
-    system "./configure", "--disable-dependency-tracking", 
+    inreplace "src/Makefile.in", "GV.gsInterpreter:\tgs", "GV.gsInterpreter:\t#{HOMEBREW_PREFIX\
+}/opt/ghostscript-x11/bin/gs"
+    system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--enable-SIGCHLD-fallback"
     system "make", "install"
