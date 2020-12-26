@@ -8,6 +8,7 @@ class Gv < Formula
   depends_on "pkg-config" => :build
   depends_on "johnhcc/gs-x11/ghostscript-x11"
   depends_on "libx11"
+  depends_on "libxaw3d"
 
   skip_clean "share/gv/safe-gs-workdir"
 
