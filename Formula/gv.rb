@@ -18,7 +18,7 @@ class Gv < Formula
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--enable-SIGCHLD-fallback"
-    system "make", "install"
+    system "make", "install", "LC_ALL=C"
   end
 
   test do
