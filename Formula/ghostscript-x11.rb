@@ -1,20 +1,23 @@
 class GhostscriptX11 < Formula
   desc "Interpreter for PostScript and PDF"
   homepage "https://www.ghostscript.com/"
-  url "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs9533/ghostpdl-9.53.3.tar.gz"
-  sha256 "96d04e4e464bddb062c1774ea895c4f1c1c94e6c4b62f5d32218ebd44dd65ba1"
+  url "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs9561/ghostpdl-9.56.1.tar.xz"
+  sha256 "05e64c19853e475290fd608a415289dc21892c4d08ee9086138284b6addcb299"
   license "AGPL-3.0-or-later"
 
+  # We check the tags from the `head` repository because the GitHub tags are
+  # formatted ambiguously, like `gs9533` (corresponding to version 9.53.3).
   livecheck do
-    url :head
-    regex(/^ghostpdl[._-]v?(\d+(?:\.\d+)+)$/i)
+    url :stable
+    regex(/href=.*?ghostpdl[._-]v?(\d+(?:\.\d+)+)\.t/i)
+    strategy :github_latest
   end
 
   keg_only :shadowed_by_ghostscript, "ghostscript core formula provides non-X11 version"
-  
+
   head do
     # Can't use shallow clone. Doing so = fatal errors.
-    url "https://git.ghostscript.com/ghostpdl.git", shallow: false
+    url "https://git.ghostscript.com/ghostpdl.git", branch: "master"
 
     depends_on "autoconf" => :build
     depends_on "automake" => :build
@@ -22,17 +25,25 @@ class GhostscriptX11 < Formula
   end
 
   depends_on "pkg-config" => :build
+  depends_on "fontconfig"
+  depends_on "freetype"
+  depends_on "jbig2dec"
+  depends_on "jpeg"
+  depends_on "libidn"
+  depends_on "libpng"
   depends_on "libtiff"
   depends_on "libx11"
+  depends_on "little-cms2"
+  depends_on "openjpeg"
 
-  on_macos do
-    patch :DATA # Uncomment macOS-specific make vars
-  end
-  
+  uses_from_macos "expat"
+  uses_from_macos "zlib"
+
   on_linux do
-    depends_on "fontconfig"
-    depends_on "libidn"
+    depends_on "gcc"
   end
+
+  fails_with gcc: "5"
 
   # https://sourceforge.net/projects/gs-fonts/
   resource "fonts" do
@@ -41,27 +52,41 @@ class GhostscriptX11 < Formula
   end
 
   def install
-    # Fixes: ./soobj/dxmainc.o: file not recognized: File truncated
-    ENV.deparallelize unless OS.mac?
+    # Fix vendored tesseract build error: 'cstring' file not found
+    # Remove when possible to link to system tesseract
+    ENV.append_to_cflags "-stdlib=libc++" if ENV.compiler == :clang
 
-    args = %W[
-      --prefix=#{prefix}
-      --disable-cups
+    # Fix VERSION file incorrectly included as C++20 <version> header
+    # Remove when possible to link to system tesseract
+    rm "tesseract/VERSION"
+
+    # Delete local vendored sources so build uses system dependencies
+    rm_rf "expat"
+    rm_rf "freetype"
+    rm_rf "jbig2dec"
+    rm_rf "jpeg"
+    rm_rf "lcms2mt"
+    rm_rf "libpng"
+    rm_rf "openjpeg"
+    rm_rf "tiff"
+    rm_rf "zlib"
+
+    args = %w[
       --disable-compile-inits
+      --disable-cups
       --disable-gtk
-      --disable-fontconfig
-      --without-libidn
+      --with-system-libtiff
     ]
 
     if build.head?
-      system "./autogen.sh", *args
+      system "./autogen.sh", *std_configure_args, *args
     else
-      system "./configure", *args
+      system "./configure", *std_configure_args, *args
     end
 
     # Install binaries and libraries
     system "make", "install"
-    system "make", "install-so"
+    ENV.deparallelize { system "make", "install-so" }
 
     (pkgshare/"fonts").install resource("fonts")
     (man/"de").rmtree
@@ -69,51 +94,6 @@ class GhostscriptX11 < Formula
 
   test do
     ps = test_fixtures("test.ps")
-    assert_match /Hello World!/, shell_output("#{bin}/ps2ascii #{ps}")
+    assert_match "Hello World!", shell_output("#{bin}/ps2ascii #{ps}")
   end
 end
-
-__END__
-diff --git i/base/unix-dll.mak w/base/unix-dll.mak
-index f50c09c00adb..8855133b400c 100644
---- i/base/unix-dll.mak
-+++ w/base/unix-dll.mak
-@@ -89,18 +89,33 @@ GPDL_SONAME_MAJOR_MINOR=$(GPDL_SONAME_BASE)$(GS_SOEXT)$(SO_LIB_VERSION_SEPARATOR
- # similar linkers it must containt the trailing "="
- # LDFLAGS_SO=-shared -Wl,$(LD_SET_DT_SONAME)$(LDFLAGS_SO_PREFIX)$(GS_SONAME_MAJOR)
-
-
- # MacOS X
--#GS_SOEXT=dylib
--#GS_SONAME=$(GS_SONAME_BASE).$(GS_SOEXT)
--#GS_SONAME_MAJOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_SOEXT)
--#GS_SONAME_MAJOR_MINOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
-+GS_SOEXT=dylib
-+GS_SONAME=$(GS_SONAME_BASE).$(GS_SOEXT)
-+GS_SONAME_MAJOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_SOEXT)
-+GS_SONAME_MAJOR_MINOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
- #LDFLAGS_SO=-dynamiclib -flat_namespace
--#LDFLAGS_SO_MAC=-dynamiclib -install_name $(GS_SONAME_MAJOR_MINOR)
-+GS_LDFLAGS_SO=-dynamiclib -install_name $(GS_SONAME_MAJOR_MINOR)
- #LDFLAGS_SO=-dynamiclib -install_name $(FRAMEWORK_NAME)
-
-+PCL_SONAME=$(PCL_SONAME_BASE).$(GS_SOEXT)
-+PCL_SONAME_MAJOR=$(PCL_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_SOEXT)
-+PCL_SONAME_MAJOR_MINOR=$(PCL_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
-+PCL_LDFLAGS_SO=-dynamiclib -install_name $(PCL_SONAME_MAJOR_MINOR)
-+
-+XPS_SONAME=$(XPS_SONAME_BASE).$(GS_SOEXT)
-+XPS_SONAME_MAJOR=$(XPS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_SOEXT)
-+XPS_SONAME_MAJOR_MINOR=$(XPS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
-+XPS_LDFLAGS_SO=-dynamiclib -install_name $(XPS_SONAME_MAJOR_MINOR)
-+
-+GPDL_SONAME=$(GPDL_SONAME_BASE).$(GS_SOEXT)
-+GPDL_SONAME_MAJOR=$(GPDL_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_SOEXT)
-+GPDL_SONAME_MAJOR_MINOR=$(GPDL_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
-+GPDL_LDFLAGS_SO=-dynamiclib -install_name $(GPDL_SONAME_MAJOR_MINOR)
-+
- GS_SO=$(BINDIR)/$(GS_SONAME)
- GS_SO_MAJOR=$(BINDIR)/$(GS_SONAME_MAJOR)
- GS_SO_MAJOR_MINOR=$(BINDIR)/$(GS_SONAME_MAJOR_MINOR)
-
- PCL_SO=$(BINDIR)/$(PCL_SONAME)
