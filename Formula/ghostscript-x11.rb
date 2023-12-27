@@ -29,6 +29,8 @@ class GhostscriptX11 < Formula
   depends_on "freetype"
   depends_on "jbig2dec"
   depends_on "jpeg"
+  depends_on "libxt"
+  depends_on "libxext"
   depends_on "libidn"
   depends_on "libpng"
   depends_on "libtiff"
