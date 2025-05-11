@@ -6,9 +6,9 @@ To install Ghostscript with X11 support:
 ```
 brew install johnhcc/gs-x11/ghostscript-x11
 ```
-**This builds from source and it may take 10 minutes or more to complete**. Please be patient, even if it seems to be stuck.
+**This builds from source and it may take several minutes to complete**. Please be patient, even if it seems to be stuck.
  
-Ghostscript will be installed as [keg-only](https://docs.brew.sh/FAQ#what-does-keg-only-mean), meaning it will not be linked into `/usr/local` to prevent conflicts with the core Ghostscript formula. However you can still access the X11-enabled binaries directly at `$(brew --prefix)/opt/ghostscript-x11/bin`.
+Ghostscript will be installed as [keg-only](https://docs.brew.sh/FAQ#what-does-keg-only-mean), meaning it will not be linked into `/opt/homebrew` (or `/usr/local`, etc.) to prevent conflicts with the core Ghostscript formula. However you can still access the X11-enabled binaries directly at `$(brew --prefix)/opt/ghostscript-x11/bin`.
 
 Similarly, GV can be installed with:
 ```
